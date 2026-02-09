@@ -1,0 +1,23 @@
+[project]
+name = "screenshot-activity"
+version = "0.1.0"
+description = "Analyze screenshot, saved-image, and camera-photo activity patterns."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "matplotlib>=3.8",
+  "pandas>=2.2",
+  "pillow>=10.0",
+  "pyyaml>=6.0",
+  "seaborn>=0.13",
+]
+
+[project.scripts]
+activity = "activity:main"
+
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = ["activity", "plots"]
