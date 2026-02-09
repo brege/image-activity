@@ -12,6 +12,12 @@ dependencies = [
   "seaborn>=0.13",
 ]
 
+[project.optional-dependencies]
+dev = [
+  "pre-commit>=3.8",
+  "ruff>=0.8.0",
+]
+
 [project.scripts]
 activity = "activity:main"
 
@@ -21,3 +27,10 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 py-modules = ["activity", "plots"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
