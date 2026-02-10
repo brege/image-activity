@@ -72,7 +72,6 @@ analysis_sets:
       title: Camera Activity
       value_label: Photos
       plots:
-        - hourly
         - panel
         - heatmap
       events:
@@ -94,7 +93,7 @@ analysis_sets:
       - camera
     plot:
       title: Combined Image Activity
-      value_label: Files
+      value_label: Images
       plots:
         - hourly
         - timeseries
