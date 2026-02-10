@@ -1,0 +1,107 @@
+extensions:
+  - .jpg
+  - .jpeg
+  - .png
+  - .webp
+  - .gif
+  - .bmp
+
+anti_patterns:
+  - "*.tmp"
+  - "*.partial"
+  - "*_backup*"
+  - "*.DS_Store"
+  - "Thumbs.db"
+
+events:
+  event_one:
+    type: band
+    after: 2021-01-01
+    before: 2021-03-31
+    label: Event One
+  event_two:
+    type: marker
+    date: 2022-06-15
+    label: Event Two
+  milestones:
+    events:
+      - event_one
+      - event_two
+
+analysis_sets:
+  screenshots:
+    methods:
+      - timestamp
+    plot:
+      output_dirname: screenshot
+      title: Screenshot Activity
+      value_label: Screenshots
+      plots:
+        - hourly
+        - timeseries
+        - heatmap
+      log: true
+      events:
+        - milestones
+      timeseries_mode: by_source
+      rolling_window: 7
+    sources:
+      laptop:
+        path: ~/Pictures/Screenshots
+        exclude: []
+      phone:
+        path: ~/Syncthing/Phone/Screenshots
+        exclude: []
+    patterns:
+      - name: Screenshot From YYYY-MM-DD HH-MM-SS.png
+        regex: ^Screenshot From \d{4}-\d{2}-\d{2} \d{2}-\d{2}-\d{2}\.png$
+        timestamp_format: "Screenshot From %Y-%m-%d %H-%M-%S.png"
+      - name: Screenshot from YYYY-MM-DD HH-MM-SS.png
+        regex: ^Screenshot from \d{4}-\d{2}-\d{2} \d{2}-\d{2}-\d{2}\.png$
+        timestamp_format: "Screenshot from %Y-%m-%d %H-%M-%S.png"
+      - name: Screenshot_YYYY-MM-DD-HH-MM-SS.png
+        regex: ^Screenshot_\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}\.png$
+        timestamp_format: "Screenshot_%Y-%m-%d-%H-%M-%S.png"
+
+  camera:
+    methods:
+      - exif-created
+      - timestamp
+      - modified-time
+    plot:
+      title: Camera Activity
+      value_label: Photos
+      plots:
+        - hourly
+        - panel
+        - heatmap
+      events:
+        - milestones
+    sources:
+      laptop:
+        path: ~/Pictures/Camera
+        exclude: []
+      phone:
+        path: ~/Syncthing/Phone/Camera/DCIM
+        exclude: []
+    anti_patterns:
+      - "*.HEIC.jpg"
+      - "*_thumbnail*"
+
+  combined:
+    combine:
+      - screenshots
+      - camera
+    plot:
+      title: Combined Image Activity
+      value_label: Files
+      plots:
+        - hourly
+        - timeseries
+      log: true
+      events:
+        - milestones
+      timeseries_mode: by_source
+      series_key: analysis
+      legend_title: Analysis
+      rolling_window: 14

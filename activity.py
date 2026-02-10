@@ -43,14 +43,7 @@ def load_config(config_path: str) -> dict[str, Any]:
 
 
 def get_methods(analysis_set: dict[str, Any], source_spec: dict[str, Any]) -> list[str]:
-    methods = source_spec.get("methods", analysis_set["methods"])
-    if not isinstance(methods, list) or not methods:
-        raise ValueError("methods must be a non-empty list")
-    supported_methods = {"timestamp", "modified-time", "exif-created", "exif-modified"}
-    unsupported = [method for method in methods if method not in supported_methods]
-    if unsupported:
-        raise ValueError(f"Unsupported methods: {unsupported}")
-    return methods
+    return source_spec.get("methods", analysis_set["methods"])
 
 
 def resolve_events(
@@ -64,30 +57,16 @@ def resolve_events(
     resolved_events: list[dict[str, Any]] = []
 
     for event_reference in event_references:
-        if event_reference not in events_map:
-            raise ValueError(f"Unknown event reference: {event_reference}")
         if event_reference in visited_events:
             raise ValueError(f"Cyclic event group detected at '{event_reference}'")
 
         event_definition = events_map[event_reference]
         if "events" in event_definition:
             nested_event_references = event_definition["events"]
-            if not isinstance(nested_event_references, list):
-                raise ValueError(f"events entry '{event_reference}' must define events as a list")
             next_visited = set(visited_events)
             next_visited.add(event_reference)
             resolved_events.extend(resolve_events(config, nested_event_references, next_visited))
             continue
-
-        event_type = event_definition.get("type")
-        if event_type == "band":
-            if "after" not in event_definition or "before" not in event_definition:
-                raise ValueError(f"band event '{event_reference}' must include after and before")
-        elif event_type == "marker":
-            if "date" not in event_definition:
-                raise ValueError(f"marker event '{event_reference}' must include date")
-        else:
-            raise ValueError(f"event '{event_reference}' has unsupported type '{event_type}'")
 
         resolved_events.append(event_definition)
 
@@ -130,7 +109,7 @@ def parse_timestamp(filename: str, patterns: list[dict[str, Any]]) -> datetime |
             # Regex captures timestamp components that are joined into one parse string.
             timestamp_match = re.match(pattern["timestamp_regex"], filename)
             if timestamp_match is None:
-                raise ValueError(f"timestamp_regex did not match for pattern {pattern['name']}")
+                continue
             return datetime.strptime(
                 "".join(timestamp_match.groups()),
                 pattern["timestamp_components_format"],
@@ -251,8 +230,6 @@ def run_set(config: dict[str, Any], set_name: str, output_dir: str) -> None:
     plot_config = dict(config["analysis_sets"][set_name].get("plot", {}))
     event_references = plot_config.get("events", [])
     if event_references:
-        if not isinstance(event_references, list):
-            raise ValueError(f"plot.events for '{set_name}' must be a list")
         plot_config["event_items"] = resolve_events(config, event_references)
     plots.plot_set(dataframe, output_dir, set_name, plot_config)
 

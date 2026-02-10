@@ -22,11 +22,11 @@ dev = [
 activity = "activity:main"
 
 [build-system]
-requires = ["setuptools>=69", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
 
-[tool.setuptools]
-py-modules = ["activity", "plots"]
+[tool.hatch.build.targets.wheel]
+include = ["activity.py", "plots.py"]
 
 [tool.ruff]
 line-length = 100
