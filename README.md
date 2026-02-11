@@ -2,49 +2,55 @@
 
 Plotting image activity over time from multiple sources and image types.
 
+This repo is part of a series of data exploration projects around my personal computer usage. Their README's are blog-like in background because [brege.org](https://brege.org) is their intended target.
+
 ## Quickstart
 
 ```bash
 git clone https://github.com/brege/image-activity.git && cd image-activity
 cp config.example.yaml config.yaml
-# edit paths
-uv run activity # -o images
+# see "Configuration" below
+uv run activity # --output-dir images
 ```
 
 ## Features
 
+- Generate heatmaps and histograms of image saving activity over hours, days, and months
+- Use file timestamps, modified-times, EXIF, and regex parsing for refined image discovery
 - Add bands and markers for major life events
-- Generate heatmaps over days of week and hours of day
-- Timestamp, modified-time, EXIF, and regex parsing for refined picture-set slicing
 
 ## Background
 
-I wanted to determine any trends surrounding major events in my life related to photo saving frequency.
+I wanted to determine if my image activity is dependent on major events and device purchases in my life.
 
-I'm not a social media person, although my 
-[mastodon](https://mastodon.social/@brege) did see an uptick of usage following my hip surgery, where I began hiking and foraging a lot.
+- do I tend to take more pictures during certain times of year?
+- how has my screenshot usage evolved over the last 15 years?
+- do I have "honeymoon" periods after a device purchase?
+- in what ways has my camera and screenshot usage changed between being an academic, chef, and developer?
+
+I'm not a social media person, although my [mastodon](https://mastodon.social/@brege) did see an uptick of usage following my hip surgery, where I began hiking and foraging a lot.
 
 My image activity fits in three main categories:
 
-1. storage of camera photos from my phone
-2. screenshots on both my laptop and phone
-3. pictures downloaded from the internet
+1. **camera**: storage of camera photos from my phone
+2. **screenshots**: screenshots on both my laptop and phone
+3. **internet**: pictures downloaded from the internet
 
 ## Gallery
 
-I've marked in these first two plots, [Camera Usage](#camera-usage) and [Image Capture Concurrency](#image-capture-concurrency), times when I've purchased a major device (a new phone or laptop) and major periods of my life. These plots have all been normalized to a 0-100 photo count scale.
+I've marked in these first line charts, [Camera Usage](#camera-usage) and [Image Capture Concurrency](#image-capture-concurrency), times when I've purchased a major device (a new phone or laptop) and a couple key periods of my life. These plots have all been normalized to a 0-100 photo count scale.
 
 ### Camera Usage
 
-From 2010 to 2017 I was a Physics TA and, following the 2014 prelims, a computational astrophysics PhD researcher. I began attending conferences in 2015, exploring places around Pullman, WA during the researcher years. 
+From 2010 to 2017 I was a Physics TA and, following my 2014 physics prelims, a computational astrophysics doctoral researcher. I began attending conferences in 2015, exploring places around Pullman, WA during these researcher years there.
 
 <img src="docs/img/combined/panel.png" width="100%">
 
-At the end of 2017, I left that life. I embraced my love of food and cooking and became a professional chef for a number of years thereafter, including the Covid-19 pandemic. This period of my life saw a greater number of photos taken: pictures of plates, menus, schedules, etc. My camera photos before this time were mostly travel, event, and pet driven.
+At the end of 2017, I left that life. I embraced my love of food and cooking and became a professional chef for a number of years thereafter, including the Covid-19 pandemic. This period of my life saw a greater number of photos taken: pictures of plates, menus, schedules, etc. My camera photos before this time were mostly non-work-related: travel, events, and pets drove image origination.
 
 ### Image Capture Concurrency
 
-<img src="docs/img/combined/merged.png" width="100%">
+<img src="docs/img/combined/sum.png" width="100%">
 
 ### Heatmaps
 
@@ -52,7 +58,9 @@ I only have one experience with online coursework: the data science bootcamp I a
 
 1. The creation of my website [brege.org](https://brege.org) around August 2016. 
 2. As an executive chef, screenshotting is recurrent for scheduling, text message records, receipts/purchase dates, etc. 
-3. Agentic-driven coding workflows, beginning midway through 2025, saw a surge in screenshot usage. Screenshots have become a critical part of my front-end debugging workflow for web app development, extending beyond data-structured [Cypress](https://www.cypress.io) end-to-end tests.
+3. Agentic-driven coding workflows, beginning midway through 2025, saw a surge in screenshot usage. Screenshots have become a large part of my front-end debugging workflow for web app development--extending well beyond data-structured [Cypress](https://www.cypress.io) end-to-end tests.
+
+I did not find my screenshot usage noticeably change during my brief stint with online coursework.
 
 <table>
   <tr>
@@ -64,7 +72,7 @@ I only have one experience with online coursework: the data science bootcamp I a
 
 In general, it appears that I take more screenshots on desktop earlier in the week and in the afternoon (averaged over the last ~15 years). To my surprise, the heatmap for screenshots on my phone have nearly identical densities. I assumed this would be biased toward the weekend and closer to 17:00 because of sports and restaurant dinner service.
 
-Camera usage frequency, on the other hand, is made distinct by day of week only on density during Thursday evening and Saturday afternoon.
+Camera usage frequency, on the other hand, is made distinct by day of week only on density during Thursday evening and Saturday afternoon.  It's especially featured in both my Chef days and post-op mobility.
 
 ### Histograms
 

@@ -271,6 +271,18 @@ def render_figures(
         if kind == "curves":
             plot_curves(dataframe, figure, data_config, output_dir, event_items)
             continue
+        if kind == "total_curve":
+            total_rows = dataframe[dataframe["series"].isin(figure["series"])].copy()
+            total_rows["series"] = "__sum__"
+            total_figure = dict(figure)
+            total_figure["series"] = ["__sum__"]
+            total_data = dict(data_config)
+            total_data["__sum__"] = {
+                "label": figure.get("label", "summed sources"),
+                "color": figure.get("color", "#444444"),
+            }
+            plot_curves(total_rows, total_figure, total_data, output_dir, event_items)
+            continue
         if kind == "panel_curves":
             plot_panel_curves(dataframe, figure, data_config, output_dir, event_items)
             continue
