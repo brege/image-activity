@@ -254,7 +254,7 @@ def main() -> None:
 
     config = load_config(args.config)
     output_dir = args.output_dir or config.output_dir
-    Path(output_dir).mkdir(exist_ok=True)
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
 
     if not args.key:
         for set_name in config.plots:

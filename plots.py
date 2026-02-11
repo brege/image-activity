@@ -414,7 +414,7 @@ def plot(
     figures = config.get("figures", [])
     if not plots and not figures:
         return
-    output_dir.mkdir(exist_ok=True)
+    output_dir.mkdir(parents=True, exist_ok=True)
     event_items = config.get("event_items", [])
     set_plot_style()
     if figures:
