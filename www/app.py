@@ -2,13 +2,15 @@ import glob
 import json
 import os
 from pathlib import Path
-from flask import Flask, jsonify, request, send_file, render_template
+
+from flask import Flask, jsonify, render_template, request, send_file
 
 APP_DIR = Path(__file__).resolve().parent
 app = Flask(__name__, template_folder=str(APP_DIR), static_folder=str(APP_DIR))
 BASE_DIR = Path(os.environ.get("TAGGER_BASE", ".")).resolve()
 JSONL_GLOB = os.environ.get("TAGGER_JSONL", "data/ocr/*/index.jsonl")
 LABELS_PATH = Path(os.environ.get("TAGGER_LABELS", "data/labels.jsonl"))
+
 
 def read_jsonl(path):
     rows = []
@@ -68,6 +70,7 @@ def write_labels(labels_by_path):
 def index():
     return render_template("index.html")
 
+
 @app.get("/style.css")
 def style():
     return send_file(APP_DIR / "style.css")
@@ -90,9 +93,7 @@ def get_tags():
 def patch_item(idx):
     body = request.get_json(silent=True) or {}
     categories = body.get("categories", [])
-    if not isinstance(categories, list) or any(
-        not isinstance(entry, str) for entry in categories
-    ):
+    if not isinstance(categories, list) or any(not isinstance(entry, str) for entry in categories):
         return jsonify({"error": "categories must be a list of strings"}), 400
     items = load_all()
     if idx >= len(items):

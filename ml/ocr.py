@@ -88,9 +88,7 @@ def run_ocr(
             for image_path in images:
                 with Image.open(image_path) as image:
                     prepared = resize_for_ocr(image, max_dimension)
-                    text = pytesseract.image_to_string(
-                        prepared, lang=lang, config=tesseract_config
-                    )
+                    text = pytesseract.image_to_string(prepared, lang=lang, config=tesseract_config)
                 output_text_path = output_dir / f"{image_path.stem}.txt"
                 with output_text_path.open("w", encoding="utf-8") as text_handle:
                     text_handle.write(text)
