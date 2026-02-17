@@ -6,13 +6,26 @@
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="stylesheet"
     href="https://cdn.jsdelivr.net/npm/@yaireo/tagify/dist/tagify.css">
-  <link rel="stylesheet" href="/style.css?v=3">
+  <link rel="stylesheet" href="/style.css?v=7">
 </head>
 <body>
   <div id="topbar">
     <span id="counter"><button id="jump" type="button">—</button> / <span id="total">—</span></span>
     <span id="progress"></span>
+    <select id="clusters">
+      <option value="">all clusters</option>
+    </select>
     <span id="hints">j/k · navigate &nbsp;|&nbsp; / or Enter · focus</span>
+  </div>
+  <div id="ml-panel">
+    <span id="ml-status">ml: idle</span>
+    <span id="ml-sources"></span>
+  </div>
+  <div id="bulkbar" class="hidden">
+    <span id="bulk-count">0 selected</span>
+    <button id="bulk-select-toggle" type="button">select all</button>
+    <button id="bulk-apply" type="button">apply tags</button>
+    <button id="bulk-expand" type="button">collapse</button>
   </div>
   <div id="img-wrap">
     <img id="shot" src="" alt="">
@@ -26,6 +39,6 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@yaireo/tagify/dist/tagify.min.js"></script>
-  <script src="/app.js?v=2"></script>
+  <script src="/app.js?v=8"></script>
 </body>
 </html>

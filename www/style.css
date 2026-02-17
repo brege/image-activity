@@ -43,6 +43,13 @@ body {
   padding: 4px 6px;
   border-radius: 3px;
 }
+#clusters {
+  background: #2a2a28;
+  color: var(--theme-text-primary-dark);
+  border: 1px solid var(--theme-border-muted-dark);
+  padding: 4px 6px;
+  border-radius: 3px;
+}
 #filter-toggle {
   background: #2a2a28;
   color: var(--theme-text-primary-dark);
@@ -59,6 +66,45 @@ body {
 #counter { color: var(--theme-text-muted-dark); }
 #progress { color: var(--theme-accent-dark); }
 #hints { margin-left: auto; color: var(--theme-text-label-dark); }
+#ml-panel {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 4px 12px;
+  background: #2f2f2d;
+  border-bottom: 1px solid var(--theme-border-muted-dark);
+  color: var(--theme-text-label-dark);
+  font-size: 11px;
+}
+#ml-status {
+  color: #8fc7ff;
+}
+#bulkbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  background: #2b2b29;
+  border-bottom: 1px solid var(--theme-border-muted-dark);
+}
+#bulkbar.hidden {
+  display: none;
+}
+#bulk-count {
+  color: var(--theme-accent-dark);
+  min-width: 86px;
+}
+#bulkbar button {
+  background: #2a2a28;
+  color: var(--theme-text-primary-dark);
+  border: 1px solid var(--theme-border-muted-dark);
+  padding: 4px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+#bulkbar button:hover {
+  border-color: var(--theme-accent-dark);
+}
 #img-wrap {
   flex: 1; overflow: hidden;
   display: flex; align-items: center; justify-content: center;
@@ -91,17 +137,53 @@ body {
   cursor: pointer;
   overflow: hidden;
   background: #1f1f1d;
+  aspect-ratio: 16 / 10;
 }
 #gallery .thumb img {
   width: 100%;
-  height: auto;
+  height: 100%;
   object-fit: cover;
   object-position: center;
   display: block;
 }
+#gallery.expanded .thumb {
+  aspect-ratio: auto;
+  overflow: visible;
+}
+#gallery.expanded .thumb img {
+  height: auto;
+  object-fit: contain;
+}
 #gallery .thumb.active {
   outline: 2px solid var(--theme-accent-dark);
   outline-offset: -2px;
+}
+#gallery .thumb.selected {
+  border-color: var(--theme-accent-dark);
+  box-shadow: 0 0 0 1px var(--theme-accent-dark) inset;
+}
+#gallery .thumb .check {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid #777;
+  color: #111;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  appearance: none;
+  cursor: pointer;
+  z-index: 2;
+  padding: 0;
+}
+#gallery .thumb.selected .check {
+  background: var(--theme-accent-dark);
+  border-color: var(--theme-accent-dark);
 }
 #gallery .thumb:hover .overlay {
   opacity: 1;
