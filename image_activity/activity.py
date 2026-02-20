@@ -51,12 +51,23 @@ class ConfigModel(BaseModel):
     @model_validator(mode="after")
     def validate_analysis_references(self) -> "ConfigModel":
         known_series = set(self.data.keys())
+        known_events = set(self.events.keys())
         for set_name, set_config in self.plots.items():
             missing_series = [
                 series_name for series_name in set_config.series if series_name not in known_series
             ]
             if missing_series:
                 raise ValueError(f"plots.{set_name} references unknown series: {missing_series}")
+            missing_events = [
+                event_name for event_name in set_config.events if event_name not in known_events
+            ]
+            if missing_events:
+                raise ValueError(f"plots.{set_name} references unknown events: {missing_events}")
+        for event_name, event_definition in self.events.items():
+            if "events" in event_definition:
+                raise ValueError(
+                    f"events.{event_name} uses nested event groups; nesting is not supported"
+                )
         return self
 
 
@@ -72,25 +83,18 @@ def load_config(config_path: str) -> ConfigModel:
 def resolve_events(
     config: ConfigModel,
     event_references: list[str],
-    visited_events: set[str] | None = None,
 ) -> list[dict[str, Any]]:
-    if visited_events is None:
-        visited_events = set()
     events_map = config.events
     resolved_events: list[dict[str, Any]] = []
 
     for event_reference in event_references:
-        if event_reference in visited_events:
-            raise ValueError(f"Cyclic event group detected at '{event_reference}'")
-
+        if event_reference not in events_map:
+            raise ValueError(f"Unknown event '{event_reference}'")
         event_definition = events_map[event_reference]
         if "events" in event_definition:
-            nested_event_references = event_definition["events"]
-            next_visited = set(visited_events)
-            next_visited.add(event_reference)
-            resolved_events.extend(resolve_events(config, nested_event_references, next_visited))
-            continue
-
+            raise ValueError(
+                f"events.{event_reference} uses nested event groups; nesting is not supported"
+            )
         resolved_events.append(event_definition)
 
     return resolved_events

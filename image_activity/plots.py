@@ -117,6 +117,70 @@ def max_normalize(values: pd.Series | pd.DataFrame, max_value: int) -> pd.Series
     return values * (100.0 / max_value)
 
 
+def build_curve_panel(
+    dataframe: pd.DataFrame,
+    data_config: dict[str, Any],
+    series_ids: list[str],
+) -> tuple[
+    list[tuple[dict[str, Any], pd.DataFrame]],
+    int,
+    pd.Timestamp | None,
+    pd.Timestamp | None,
+]:
+    panel_series = []
+    panel_max = 0
+    active_start = None
+    active_end = None
+    for series_id in series_ids:
+        series_spec = get_series_spec(data_config, series_id)
+        daily_counts = build_daily_series(select_series_data(dataframe, series_id))
+        panel_series.append((series_spec, daily_counts))
+        if not daily_counts.empty:
+            panel_max = max(panel_max, int(daily_counts["count"].max()))
+            date_start = daily_counts["date"].min()
+            date_end = daily_counts["date"].max()
+            active_start = date_start if active_start is None else min(active_start, date_start)
+            active_end = date_end if active_end is None else max(active_end, date_end)
+    return panel_series, panel_max, active_start, active_end
+
+
+def draw_curve_panel(
+    axis,
+    panel_series: list[tuple[dict[str, Any], pd.DataFrame]],
+    panel_max: int,
+    rolling_window: int,
+    show_raw: bool,
+    y_scale: str,
+    include_window_suffix: bool,
+) -> None:
+    for series_spec, daily_counts in panel_series:
+        normalized_count = max_normalize(daily_counts["count"], panel_max).clip(upper=100)
+        smoothed = normalized_count.rolling(window=rolling_window, center=True).mean()
+        if y_scale == "log":
+            smoothed = smoothed.where(smoothed > 0)
+            raw_values = normalized_count.where(normalized_count > 0)
+        else:
+            raw_values = normalized_count
+        if show_raw:
+            axis.plot(
+                daily_counts["date"],
+                raw_values,
+                alpha=0.2,
+                linewidth=0.7,
+                color=series_spec["color"],
+            )
+        label = series_spec["label"]
+        if include_window_suffix:
+            label = f"{label} ({rolling_window}-day avg)"
+        axis.plot(
+            daily_counts["date"],
+            smoothed,
+            linewidth=2,
+            color=series_spec["color"],
+            label=label,
+        )
+
+
 def plot_curves(
     dataframe: pd.DataFrame,
     figure: dict[str, Any],
@@ -124,118 +188,56 @@ def plot_curves(
     output_dir: Path,
     event_items: list[dict],
 ) -> None:
+    is_panel_mode = "panels" in figure
     rolling_window = int(figure.get("rolling_window", 14))
-    y_scale = figure.get("y_scale", "linear")
-    show_raw = bool(figure.get("show_raw", True))
+    y_scale = figure.get("y_scale", "log" if is_panel_mode else "linear")
+    show_raw = bool(figure.get("show_raw", False if is_panel_mode else True))
     x_start = parse_x_start(figure)
-    daily_series: list[tuple[dict[str, Any], pd.DataFrame]] = []
-    max_count = 0
-    for series_id in figure["series"]:
-        series_spec = get_series_spec(data_config, series_id)
-        daily_counts = build_daily_series(select_series_data(dataframe, series_id))
-        daily_series.append((series_spec, daily_counts))
-        if not daily_counts.empty:
-            max_count = max(max_count, int(daily_counts["count"].max()))
 
-    plt.figure(figsize=(15, 6))
-    for series_spec, daily_counts in daily_series:
-        normalized_count = max_normalize(daily_counts["count"], max_count).clip(upper=100)
-        if show_raw:
-            plt.plot(
-                daily_counts["date"],
-                normalized_count,
-                alpha=0.2,
-                linewidth=0.7,
-                color=series_spec["color"],
-            )
-        plt.plot(
-            daily_counts["date"],
-            normalized_count.rolling(window=rolling_window, center=True).mean(),
-            linewidth=2,
-            color=series_spec["color"],
-            label=f"{series_spec['label']} ({rolling_window}-day avg)",
-        )
-
-    plt.title(figure["title"])
-    plt.xlabel("Date")
-    plt.ylabel(figure["y_label"])
-    if y_scale == "log":
-        plt.yscale("log")
-        plt.ylim(1, 100)
+    if is_panel_mode:
+        panels = figure["panels"]
+        figure_obj, axes = plt.subplots(len(panels), 1, figsize=(15, 4 * len(panels)))
+        if len(panels) == 1:
+            axes = [axes]
+        include_window_suffix = False
     else:
-        plt.ylim(0, 100)
-    add_events(plt.gca(), event_items)
-    if x_start is not None:
-        plt.xlim(left=x_start)
-    plt.legend()
-    plt.xticks(rotation=45)
-    plt.grid(alpha=0.3)
-    plt.tight_layout()
-    plt.savefig(output_dir / figure["filename"], dpi=300, bbox_inches="tight")
-    plt.close()
-
-
-def plot_panel_curves(
-    dataframe: pd.DataFrame,
-    figure: dict[str, Any],
-    data_config: dict[str, Any],
-    output_dir: Path,
-    event_items: list[dict],
-) -> None:
-    panels = figure["panels"]
-    rolling_window = int(figure.get("rolling_window", 14))
-    y_scale = figure.get("y_scale", "log")
-    show_raw = bool(figure.get("show_raw", False))
-    x_start = parse_x_start(figure)
-    figure_obj, axes = plt.subplots(len(panels), 1, figsize=(15, 4 * len(panels)))
-    if len(panels) == 1:
-        axes = [axes]
+        panels = [
+            {
+                "title": figure["title"],
+                "series": figure["series"],
+                "y_label": figure["y_label"],
+            }
+        ]
+        figure_obj, axis = plt.subplots(1, 1, figsize=(15, 6))
+        axes = [axis]
+        include_window_suffix = True
 
     for axis, panel in zip(axes, panels):
-        panel_series = []
-        panel_max = 0
-        active_start = None
-        active_end = None
-        for series_id in panel["series"]:
-            series_spec = get_series_spec(data_config, series_id)
-            daily_counts = build_daily_series(select_series_data(dataframe, series_id))
-            panel_series.append((series_spec, daily_counts))
-            if not daily_counts.empty:
-                panel_max = max(panel_max, int(daily_counts["count"].max()))
-                date_start = daily_counts["date"].min()
-                date_end = daily_counts["date"].max()
-                active_start = date_start if active_start is None else min(active_start, date_start)
-                active_end = date_end if active_end is None else max(active_end, date_end)
-
-        for series_spec, daily_counts in panel_series:
-            normalized_count = max_normalize(daily_counts["count"], panel_max).clip(upper=100)
-            smoothed = normalized_count.rolling(window=rolling_window, center=True).mean()
-            smoothed = smoothed.where(smoothed > 0)
-            if show_raw:
-                axis.plot(
-                    daily_counts["date"],
-                    normalized_count.where(normalized_count > 0),
-                    alpha=0.2,
-                    linewidth=0.7,
-                    color=series_spec["color"],
-                )
-            axis.plot(
-                daily_counts["date"],
-                smoothed,
-                linewidth=2,
-                color=series_spec["color"],
-                label=series_spec["label"],
-            )
+        panel_series, panel_max, active_start, active_end = build_curve_panel(
+            dataframe, data_config, panel["series"]
+        )
+        draw_curve_panel(
+            axis=axis,
+            panel_series=panel_series,
+            panel_max=panel_max,
+            rolling_window=rolling_window,
+            show_raw=show_raw,
+            y_scale=y_scale,
+            include_window_suffix=include_window_suffix,
+        )
 
         add_events(axis, event_items)
         axis.set_title(panel["title"])
-        axis.set_ylabel(panel.get("y_label", "Images (local max-normalized to 100)"))
+        if is_panel_mode:
+            axis.set_ylabel(panel.get("y_label", "Images (local max-normalized to 100)"))
+        else:
+            axis.set_ylabel(panel["y_label"])
         if y_scale == "log":
             axis.set_yscale("log")
             axis.set_ylim(1, 100)
         else:
             axis.set_ylim(0, 100)
-        if active_start is not None and active_end is not None:
+        if is_panel_mode and active_start is not None and active_end is not None:
             padding_days = int(panel.get("padding_days", 30))
             padding = pd.Timedelta(days=padding_days)
             left_bound = active_start - padding
@@ -248,9 +250,30 @@ def plot_panel_curves(
         axis.legend(title=None)
 
     axes[-1].set_xlabel("Date")
+    if not is_panel_mode:
+        axes[0].tick_params(axis="x", rotation=45)
     plt.tight_layout()
     plt.savefig(output_dir / figure["filename"], dpi=300, bbox_inches="tight")
     plt.close()
+
+
+def plot_total_curve(
+    dataframe: pd.DataFrame,
+    figure: dict[str, Any],
+    data_config: dict[str, Any],
+    output_dir: Path,
+    event_items: list[dict],
+) -> None:
+    total_rows = dataframe[dataframe["series"].isin(figure["series"])].copy()
+    total_rows["series"] = "__sum__"
+    total_figure = dict(figure)
+    total_figure["series"] = ["__sum__"]
+    total_data = dict(data_config)
+    total_data["__sum__"] = {
+        "label": figure.get("label", "summed sources"),
+        "color": figure.get("color", "#444444"),
+    }
+    plot_curves(total_rows, total_figure, total_data, output_dir, event_items)
 
 
 def render_figures(
@@ -260,36 +283,34 @@ def render_figures(
     data_config: dict[str, Any],
     event_items: list[dict],
 ) -> None:
+    def handle_histogram(figure: dict[str, Any]) -> None:
+        plot_histogram(dataframe, figure, plot_config, data_config, output_dir)
+
+    def handle_curves(figure: dict[str, Any]) -> None:
+        plot_curves(dataframe, figure, data_config, output_dir, event_items)
+
+    def handle_total_curve(figure: dict[str, Any]) -> None:
+        plot_total_curve(dataframe, figure, data_config, output_dir, event_items)
+
+    def handle_heatmap_per_source(figure: dict[str, Any]) -> None:
+        series_key = figure.get("series_key", "source")
+        value_label = plot_config.get("value_label", "Images")
+        plot_series_heatmaps(dataframe, output_dir, value_label, series_key)
+
+    handlers = {
+        "histogram": handle_histogram,
+        "curves": handle_curves,
+        "panel_curves": handle_curves,
+        "total_curve": handle_total_curve,
+        "heatmap_per_source": handle_heatmap_per_source,
+    }
+
     for figure in plot_config["figures"]:
         kind = figure["kind"]
-        if kind == "histogram":
-            plot_histogram(dataframe, figure, plot_config, data_config, output_dir)
-            continue
-        if kind == "curves":
-            plot_curves(dataframe, figure, data_config, output_dir, event_items)
-            continue
-        if kind == "total_curve":
-            total_rows = dataframe[dataframe["series"].isin(figure["series"])].copy()
-            total_rows["series"] = "__sum__"
-            total_figure = dict(figure)
-            total_figure["series"] = ["__sum__"]
-            total_data = dict(data_config)
-            total_data["__sum__"] = {
-                "label": figure.get("label", "summed sources"),
-                "color": figure.get("color", "#444444"),
-            }
-            plot_curves(total_rows, total_figure, total_data, output_dir, event_items)
-            continue
-        if kind == "panel_curves":
-            plot_panel_curves(dataframe, figure, data_config, output_dir, event_items)
-            continue
-        if kind == "heatmap_per_source":
-            series_key = figure.get("series_key", "source")
-            plot_series_heatmaps(
-                dataframe, output_dir, plot_config.get("value_label", "Images"), series_key
-            )
-            continue
-        raise ValueError(f"Unsupported figure kind: {kind}")
+        handler = handlers.get(kind)
+        if handler is None:
+            raise ValueError(f"Unsupported figure kind: {kind}")
+        handler(figure)
 
 
 def add_events(axis, event_items: list[dict]) -> None:
