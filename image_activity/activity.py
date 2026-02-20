@@ -195,14 +195,7 @@ def extract_timestamp(
     return None
 
 
-def collect_rows(
-    config: ConfigModel,
-    set_name: str,
-) -> pd.DataFrame:
-    return collect_single_rows(config, set_name)
-
-
-def collect_single_rows(config: ConfigModel, set_name: str) -> pd.DataFrame:
+def collect_rows(config: ConfigModel, set_name: str) -> pd.DataFrame:
     set_config = config.plots[set_name]
     columns = ["series", "source", "analysis", "timestamp", "hour", "day_of_week", "month", "date"]
     rows = []
@@ -242,7 +235,11 @@ def run_set(config: ConfigModel, set_name: str, output_dir: str) -> None:
     event_references = plot_config.get("events", [])
     if event_references:
         plot_config["event_items"] = resolve_events(config, event_references)
-    plots.plot(dataframe, output_dir, set_name, plot_config, config.data)
+    data_config = {
+        series_id: {"label": series.label, "color": series.color}
+        for series_id, series in config.data.items()
+    }
+    plots.plot(dataframe, output_dir, set_name, plot_config, data_config)
 
 
 def main() -> None:

@@ -26,12 +26,10 @@ def get_series_spec(data_config: dict[str, Any], series_id: str) -> dict[str, An
     if series_id not in data_config:
         raise ValueError(f"Unknown series '{series_id}'")
     series_config = data_config[series_id]
-    label = series_config["label"] if isinstance(series_config, dict) else series_config.label
-    color = series_config["color"] if isinstance(series_config, dict) else series_config.color
     return {
         "id": series_id,
-        "label": label,
-        "color": color,
+        "label": series_config["label"],
+        "color": series_config["color"],
     }
 
 
@@ -83,9 +81,8 @@ def plot_histogram(
         colors.append(series_spec["color"])
 
     histogram_data = pd.DataFrame(stacked_data, index=buckets)
-    max_total = histogram_data.sum(axis=1).max()
-    if max_total > 0:
-        histogram_data = histogram_data * (100.0 / max_total)
+    max_total = int(histogram_data.sum(axis=1).max())
+    histogram_data = max_normalize(histogram_data, max_total)
 
     plt.figure(figsize=(12, 6))
     histogram_data.plot(kind="bar", stacked=True, alpha=0.8, color=colors)
@@ -114,6 +111,12 @@ def parse_x_start(figure: dict[str, Any]) -> pd.Timestamp | None:
     return pd.to_datetime(x_start)
 
 
+def max_normalize(values: pd.Series | pd.DataFrame, max_value: int) -> pd.Series | pd.DataFrame:
+    if max_value <= 0:
+        return values
+    return values * (100.0 / max_value)
+
+
 def plot_curves(
     dataframe: pd.DataFrame,
     figure: dict[str, Any],
@@ -136,10 +139,7 @@ def plot_curves(
 
     plt.figure(figsize=(15, 6))
     for series_spec, daily_counts in daily_series:
-        if max_count > 0:
-            normalized_count = (daily_counts["count"] * (100.0 / max_count)).clip(upper=100)
-        else:
-            normalized_count = daily_counts["count"]
+        normalized_count = max_normalize(daily_counts["count"], max_count).clip(upper=100)
         if show_raw:
             plt.plot(
                 daily_counts["date"],
@@ -208,10 +208,7 @@ def plot_panel_curves(
                 active_end = date_end if active_end is None else max(active_end, date_end)
 
         for series_spec, daily_counts in panel_series:
-            if panel_max > 0:
-                normalized_count = (daily_counts["count"] * (100.0 / panel_max)).clip(upper=100)
-            else:
-                normalized_count = daily_counts["count"]
+            normalized_count = max_normalize(daily_counts["count"], panel_max).clip(upper=100)
             smoothed = normalized_count.rolling(window=rolling_window, center=True).mean()
             smoothed = smoothed.where(smoothed > 0)
             if show_raw:
@@ -348,11 +345,8 @@ def plot_hourly_stacked(
     colors = None
     if colors_by_series is not None:
         colors = [colors_by_series.get(str(series_value)) for series_value in hourly_data.columns]
-    max_total = hourly_data.sum(axis=1).max()
-    if max_total > 0:
-        normalized_hourly_data = hourly_data * (100.0 / max_total)
-    else:
-        normalized_hourly_data = hourly_data
+    max_total = int(hourly_data.sum(axis=1).max())
+    normalized_hourly_data = max_normalize(hourly_data, max_total)
     normalized_hourly_data.plot(kind="bar", stacked=True, alpha=0.8, color=colors)
     plt.title(title)
     plt.xlabel("Hour of Day")
@@ -441,10 +435,7 @@ def plot(
         day_origin_hour = parse_day_origin_hour(config)
         color_map = None
         if data_config is not None:
-            color_map = {
-                series_id: (item["color"] if isinstance(item, dict) else item.color)
-                for series_id, item in data_config.items()
-            }
+            color_map = {series_id: item["color"] for series_id, item in data_config.items()}
         plot_hourly_stacked(
             clean_data,
             output_dir / "hour.png",

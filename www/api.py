@@ -1,5 +1,4 @@
 import glob
-import importlib.util
 import json
 import os
 import threading
@@ -7,77 +6,109 @@ from pathlib import Path
 
 from flask import Flask, jsonify, render_template, request, send_file
 
+from www import ml as ml_pipeline
+
 APP_DIR = Path(__file__).resolve().parent
-app = Flask(__name__, template_folder=str(APP_DIR), static_folder=str(APP_DIR))
+app = Flask(
+    __name__,
+    template_folder=str(APP_DIR),
+    static_folder=str(APP_DIR),
+    static_url_path="",
+)
 BASE_DIR = Path(os.environ.get("TAGGER_BASE", ".")).resolve()
 STATE_DIR = Path(os.environ.get("TAGGER_STATE_DIR", "www/state"))
 STATE_PATH = (BASE_DIR / STATE_DIR).resolve()
 CONFIG_PATH = Path(os.environ.get("TAGGER_CONFIG", "config.yaml")).expanduser().resolve()
 JSONL_GLOB = os.environ.get("TAGGER_JSONL", str(STATE_DIR / "items.jsonl"))
 LABELS_PATH = Path(os.environ.get("TAGGER_LABELS", str(STATE_DIR / "labels.jsonl")))
+_, _, _source_roots = ml_pipeline.resolve_screenshot_records(CONFIG_PATH)
+SOURCE_ROOTS = [Path(root) for root in _source_roots]
 
-ml_spec = importlib.util.spec_from_file_location("www_ml", APP_DIR / "ml.py")
-if ml_spec is None or ml_spec.loader is None:
-    raise RuntimeError("failed to load www/ml.py")
-ml_pipeline = importlib.util.module_from_spec(ml_spec)
-ml_spec.loader.exec_module(ml_pipeline)
-SOURCE_ROOTS = [Path(root) for root in ml_pipeline.source_roots(CONFIG_PATH)]
-LABELS_LOCK = threading.Lock()
+_CACHE_LOCK = threading.Lock()
+_ITEMS_CACHE: list[dict] = []
+_ITEMS_FINGERPRINT: tuple[tuple[str, int, int], ...] | None = None
+_LABELS_CACHE: dict[str, list[str]] = {}
+_LABELS_MTIME_NS: int | None = None
 
 
-def read_jsonl(path, strict=True):
-    rows = []
+def read_jsonl(path: Path, strict: bool = True) -> list[dict]:
+    rows: list[dict] = []
     if not path.exists():
         return rows
     with path.open(encoding="utf-8") as handle:
         for line_no, line in enumerate(handle, start=1):
             line = line.strip()
-            if line:
-                try:
-                    rows.append(json.loads(line))
-                except json.JSONDecodeError:
-                    if strict:
-                        raise ValueError(f"invalid JSONL in {path}:{line_no}") from None
+            if not line:
+                continue
+            try:
+                rows.append(json.loads(line))
+            except json.JSONDecodeError:
+                if strict:
+                    raise ValueError(f"invalid JSONL in {path}:{line_no}") from None
     return rows
 
 
-def load_all():
-    items = []
-    for jsonl_path in sorted(
-        (BASE_DIR / Path(p) for p in glob.glob(str(BASE_DIR / JSONL_GLOB))),
-        key=str,
-    ):
-        for row in read_jsonl(jsonl_path):
-            row["_src"] = str(jsonl_path)
-            items.append(row)
-    with LABELS_LOCK:
-        labels_by_path = read_labels_by_path_unlocked()
-    for item in items:
-        input_path = item.get("input_path")
-        if input_path in labels_by_path:
-            item["categories"] = labels_by_path[input_path]
-    return items
+def item_paths() -> list[Path]:
+    paths = (BASE_DIR / Path(path) for path in glob.glob(str(BASE_DIR / JSONL_GLOB)))
+    return sorted(paths, key=str)
 
 
-def strip_src(item):
-    return {k: v for k, v in item.items() if k != "_src"}
+def item_fingerprint(paths: list[Path]) -> tuple[tuple[str, int, int], ...]:
+    fingerprint: list[tuple[str, int, int]] = []
+    for path in paths:
+        if not path.exists():
+            continue
+        stat = path.stat()
+        fingerprint.append((str(path), stat.st_mtime_ns, stat.st_size))
+    return tuple(fingerprint)
 
 
-def read_labels_by_path_unlocked():
-    labels_by_path = {}
+def labels_mtime_ns() -> int | None:
+    path = BASE_DIR / LABELS_PATH
+    if not path.exists():
+        return None
+    return path.stat().st_mtime_ns
+
+
+def load_items_cached() -> list[dict]:
+    global _ITEMS_CACHE, _ITEMS_FINGERPRINT
+    paths = item_paths()
+    fingerprint = item_fingerprint(paths)
+    with _CACHE_LOCK:
+        if _ITEMS_FINGERPRINT == fingerprint:
+            return _ITEMS_CACHE
+        rows: list[dict] = []
+        for jsonl_path in paths:
+            for row in read_jsonl(jsonl_path):
+                row["_src"] = str(jsonl_path)
+                rows.append(row)
+        _ITEMS_CACHE = rows
+        _ITEMS_FINGERPRINT = fingerprint
+        return _ITEMS_CACHE
+
+
+def read_labels_file() -> dict[str, list[str]]:
+    labels: dict[str, list[str]] = {}
     for row in read_jsonl(BASE_DIR / LABELS_PATH, strict=False):
         input_path = row.get("input_path")
         if input_path:
-            labels_by_path[input_path] = row.get("categories", [])
-    return labels_by_path
+            labels[input_path] = row.get("categories", [])
+    return labels
 
 
-def read_labels_by_path():
-    with LABELS_LOCK:
-        return read_labels_by_path_unlocked()
+def load_labels_cached() -> dict[str, list[str]]:
+    global _LABELS_CACHE, _LABELS_MTIME_NS
+    mtime_ns = labels_mtime_ns()
+    with _CACHE_LOCK:
+        if _LABELS_MTIME_NS == mtime_ns:
+            return _LABELS_CACHE
+        _LABELS_CACHE = read_labels_file()
+        _LABELS_MTIME_NS = mtime_ns
+        return _LABELS_CACHE
 
 
-def write_labels_unlocked(labels_by_path):
+def write_labels_file(labels_by_path: dict[str, list[str]]) -> None:
+    global _LABELS_CACHE, _LABELS_MTIME_NS
     labels_path = BASE_DIR / LABELS_PATH
     labels_path.parent.mkdir(parents=True, exist_ok=True)
     tmp_path = labels_path.with_suffix(labels_path.suffix + ".tmp")
@@ -85,31 +116,31 @@ def write_labels_unlocked(labels_by_path):
         for input_path, categories in sorted(labels_by_path.items()):
             handle.write(json.dumps({"input_path": input_path, "categories": categories}) + "\n")
     tmp_path.replace(labels_path)
+    with _CACHE_LOCK:
+        _LABELS_CACHE = {}
+        _LABELS_MTIME_NS = None
 
 
-def write_labels(labels_by_path):
-    with LABELS_LOCK:
-        write_labels_unlocked(labels_by_path)
+def load_all() -> list[dict]:
+    items = load_items_cached()
+    labels = load_labels_cached()
+    merged: list[dict] = []
+    for item in items:
+        row = dict(item)
+        input_path = row.get("input_path")
+        if input_path in labels:
+            row["categories"] = labels[input_path]
+        merged.append(row)
+    return merged
+
+
+def strip_src(item: dict) -> dict:
+    return {key: value for key, value in item.items() if key != "_src"}
 
 
 @app.get("/")
 def index():
     return render_template("index.html")
-
-
-@app.get("/style.css")
-def style():
-    return send_file(APP_DIR / "style.css")
-
-
-@app.get("/app.js")
-def app_script():
-    return send_file(APP_DIR / "app.js")
-
-
-@app.get("/favicon.svg")
-def favicon():
-    return send_file(APP_DIR / "favicon.svg")
 
 
 @app.get("/api/items")
@@ -141,15 +172,17 @@ def patch_item(idx):
     categories = body.get("categories", [])
     if not isinstance(categories, list) or any(not isinstance(entry, str) for entry in categories):
         return jsonify({"error": "categories must be a list of strings"}), 400
-    items = load_all()
-    if idx >= len(items):
+    items = load_items_cached()
+    if idx < 0 or idx >= len(items):
         return jsonify({"error": "out of range"}), 404
-    items[idx]["categories"] = categories
-    with LABELS_LOCK:
-        labels_by_path = read_labels_by_path_unlocked()
-        labels_by_path[items[idx]["input_path"]] = categories
-        write_labels_unlocked(labels_by_path)
+    input_path = items[idx].get("input_path")
+    if not input_path:
+        return jsonify({"error": "missing input_path"}), 500
+    labels_by_path = dict(load_labels_cached())
+    labels_by_path[input_path] = categories
+    write_labels_file(labels_by_path)
     response = strip_src(items[idx])
+    response["categories"] = categories
     response["_idx"] = idx
     return jsonify(response)
 
@@ -158,16 +191,15 @@ def patch_item(idx):
 def purge_labels():
     items = load_all()
     valid_paths = {item["input_path"] for item in items if "input_path" in item}
-    with LABELS_LOCK:
-        labels_by_path = read_labels_by_path_unlocked()
-        before_count = len(labels_by_path)
-        labels_by_path = {
-            input_path: categories
-            for input_path, categories in labels_by_path.items()
-            if input_path in valid_paths
-        }
-        after_count = len(labels_by_path)
-        write_labels_unlocked(labels_by_path)
+    labels_by_path = dict(load_labels_cached())
+    before_count = len(labels_by_path)
+    labels_by_path = {
+        input_path: categories
+        for input_path, categories in labels_by_path.items()
+        if input_path in valid_paths
+    }
+    write_labels_file(labels_by_path)
+    after_count = len(labels_by_path)
     return jsonify({"removed": before_count - after_count, "remaining": after_count})
 
 
@@ -175,7 +207,7 @@ def purge_labels():
 def purge_preview():
     items = load_all()
     valid_paths = {item["input_path"] for item in items if "input_path" in item}
-    labels_by_path = read_labels_by_path()
+    labels_by_path = load_labels_cached()
     removed = sorted([input_path for input_path in labels_by_path if input_path not in valid_paths])
     return jsonify({"remove": removed, "count": len(removed)})
 

@@ -91,17 +91,6 @@ def resolve_screenshot_records(config_path: Path) -> tuple[list[dict], list[dict
     return rows, source_stats, sorted(set(source_roots))
 
 
-def source_roots(config_path: Path) -> list[str]:
-    config = load_config(str(config_path))
-    roots: list[str] = []
-    for series_name, series_config in sorted(config.data.items()):
-        if not series_name.startswith("screenshot"):
-            continue
-        for _, source_spec in sorted(series_config.sources.items()):
-            roots.append(str(Path(source_spec.path).expanduser().resolve()))
-    return sorted(set(roots))
-
-
 def default_cluster_count(total: int) -> int:
     if total < 2:
         raise ValueError("Need at least 2 images to cluster.")
@@ -138,31 +127,8 @@ def embed_images(
     vectors: list[np.ndarray] = []
     skipped = 0
     min_size = 10
-    for index, path_str in enumerate(paths, start=1):
-        with Image.open(path_str) as image:
-            if image.size[0] < min_size or image.size[1] < min_size:
-                skipped += 1
-                vectors.append(np.zeros(768, dtype=np.float32))
-                elapsed = max(time.time() - started, 1e-9)
-                rate = index / elapsed
-                eta_seconds = int((total - index) / rate) if rate > 0 else 0
-                update_status(
-                    status_path,
-                    stage="embedding",
-                    processed_images=index,
-                    total_images=total,
-                    skipped_images=skipped,
-                    rate_images_per_second=round(rate, 3),
-                    eta_seconds=eta_seconds,
-                )
-                continue
-            inputs = processor(images=image.convert("RGB"), return_tensors="pt")
 
-        with torch.no_grad():
-            outputs = model(**inputs)
-            vec = outputs.pooler_output.squeeze(0).cpu().numpy().astype(np.float32)
-        vectors.append(vec)
-
+    def report_progress(index: int) -> None:
         elapsed = max(time.time() - started, 1e-9)
         rate = index / elapsed
         eta_seconds = int((total - index) / rate) if rate > 0 else 0
@@ -175,6 +141,21 @@ def embed_images(
             rate_images_per_second=round(rate, 3),
             eta_seconds=eta_seconds,
         )
+
+    for index, path_str in enumerate(paths, start=1):
+        with Image.open(path_str) as image:
+            if image.size[0] < min_size or image.size[1] < min_size:
+                skipped += 1
+                vectors.append(np.zeros(768, dtype=np.float32))
+                report_progress(index)
+                continue
+            inputs = processor(images=image.convert("RGB"), return_tensors="pt")
+
+        with torch.no_grad():
+            outputs = model(**inputs)
+            vec = outputs.pooler_output.squeeze(0).cpu().numpy().astype(np.float32)
+        vectors.append(vec)
+        report_progress(index)
 
     return np.vstack(vectors).astype(np.float32)
 
@@ -303,7 +284,8 @@ def get_status(config_path: Path, state_dir: Path) -> dict:
     status_path = state_dir / STATUS_FILE
     payload = read_json(status_path, default={"stage": "idle"})
     if "source_roots" not in payload:
-        payload["source_roots"] = source_roots(config_path)
+        _, _, roots = resolve_screenshot_records(config_path)
+        payload["source_roots"] = roots
     if "source_stats" not in payload:
         payload["source_stats"] = []
     return payload
