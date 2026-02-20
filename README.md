@@ -151,10 +151,24 @@ uv run activity -o images
 
 ## Screenshot Categorization
 
-**TODO**
+In active development is a method to both automatically and interactively categorize screenshots. There are three main parts of this process.
 
-1. `www/` tool
-2. jupyter notebook / ml / data science
+1. Generate a reproducible screenshot sample for manual labels.
+   ```bash
+   uv run python -m ml.samples --seed 42 --samples 200
+   ```
+
+2. Launch the labeling app and label the sample.
+   ```bash
+   uv run www
+   ```
+   Open http://localhost:5000. This relies on your configuration in `config.yaml`.
+
+3. The notebook analysis compares your manual labels with OCR and CLIP clustering.
+   ```bash
+   jupyter notebook ml/classify.ipynb
+   ```
+The web app stores labels in `www/state/labels.jsonl`, and notebook experiments can be rerun as this file grows.
 
 ### Notes
 

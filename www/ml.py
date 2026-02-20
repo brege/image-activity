@@ -324,7 +324,7 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    run(config_path=Path(args.config), state_dir=Path(args.state_dir), model_name=args.model)
+    run(config_path=Path(args.config), state_dir=Path(args.state), model_name=args.model)
 
 
 if __name__ == "__main__":
