@@ -5,12 +5,13 @@ Exploring image activity over time from multiple sources & image types, and buil
 > [!NOTE] 
 > This repo is part of a series of data exploration projects around my personal computer usage. Their README's are blog-like in background because [brege.org](https://brege.org) is their intended target.
 
-## Quickstart
+## Setup
 
 ```bash
-git clone https://github.com/brege/image-activity && cd image-activity && uv sync
+git clone https://github.com/brege/image-activity
+cd image-activity && uv sync # [--extra notebook --extra ml]
 cp config.example.yaml config.yaml
-# see "Configuration" below to edit config.yaml
+# see "Configuration" below -> edit config.yaml
 uv run activity # --output-dir images
 ```
 
@@ -139,23 +140,6 @@ See [classify.ipynb](classify.ipynb) for full analysis. In short: CLIP is more a
 
 The web app currently includes only CLIP clustering in the backend. OCR will be useful to make search more robust and to provide additional suggestions.
 
-### Usage
-
-Specify a key via `-k|--key`:
-
-```bash
-uv run activity
-uv run activity --key screenshots
-uv run activity -k internet
-uv run activity -k camera
-```
-
-Set a custom output directory via `-o|--output-dir`: 
-
-```bash
-uv run activity -o images
-```
-
 ## Configuration
 
 1. **sources**: these are local paths to image directories
@@ -171,12 +155,12 @@ uv run activity -o images
          - modified-time
        sources:
          phone:
-           path: ~/Syncthing/Phone/Pictures/DCIM
+           path: ~/Syncthing/Phone/DCIM/Camera
          laptop:
-           path: ~/Pictures
+           path: ~/Pictures/Camera
    ```
 
-2. **plotting**: specify the plot for each data source
+2. **plotting**: specify figures for each analysis key (`--key`)
 
    ```yaml
    plots:
@@ -189,11 +173,10 @@ uv run activity -o images
          - kind: heatmap_per_source
            series_key: source
        events:
-         - milestones
+         - phd_defense
    ```
 
-
-3. **major events**: dates to place the bands and markers
+3. **major events**: direct marker/band definitions
 
    ```yaml
    events:
@@ -202,8 +185,6 @@ uv run activity -o images
        after: 2017-02-01
        before: 2017-07-31
        label: PhD Defense
-    milestones: 
-      - phd_defense
    ```
 
 ### Notes

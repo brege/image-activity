@@ -1,56 +1,56 @@
+output_dir: docs/img/
+
 extensions:
   - .jpg
   - .jpeg
   - .png
   - .webp
-  - .gif
-  - .bmp
 
 anti_patterns:
   - "*.tmp"
   - "*.partial"
-  - "*_backup*"
   - "*.DS_Store"
-  - "Thumbs.db"
 
 events:
-  event_one:
-    type: band
-    after: 2021-01-01
-    before: 2021-03-31
-    label: Event One
-  event_two:
+  new_phone_2022:
     type: marker
-    date: 2022-06-15
-    label: Event Two
-  milestones:
-    events:
-      - event_one
-      - event_two
+    date: 2022-10-30
+    label: New Phone
+  phd_defense:
+    type: band
+    after: 2017-02-01
+    before: 2017-07-31
+    label: PhD Defense
 
-analysis_sets:
-  screenshots:
+data:
+  # Keep screenshot* prefix for web-app screenshot discovery.
+  screenshot-phone:
+    label: screenshot (phone)
+    color: "#2468b4"
     methods:
       - timestamp
-    plot:
-      output_dirname: screenshot
-      title: Screenshot Activity
-      value_label: Screenshots
-      plots:
-        - hourly
-        - timeseries
-        - heatmap
-      log: true
-      events:
-        - milestones
-      timeseries_mode: by_source
-      rolling_window: 7
+    sources:
+      phone:
+        path: ~/Syncthing/Phone/Pictures/Screenshots
+        exclude: []
+    patterns:
+      - name: Screenshot_YYYYMMDD-HHMMSS.png
+        regex: ^Screenshot_\d{8}-\d{6}\.png$
+        timestamp_format: "Screenshot_%Y%m%d-%H%M%S.png"
+      - name: Screenshot_YYYYMMDD-HHMMSS~N.png
+        regex: ^Screenshot_\d{8}-\d{6}~\d+\.png$
+        timestamp_regex: Screenshot_(\d{8})-(\d{6})~\d+\.png
+        timestamp_components_format: "%Y%m%d%H%M%S"
+
+  screenshot-laptop:
+    label: screenshot (laptop)
+    color: "#2aa7a1"
+    methods:
+      - timestamp
     sources:
       laptop:
+        # Ubuntu/XDG default screenshot location.
         path: ~/Pictures/Screenshots
-        exclude: []
-      phone:
-        path: ~/Syncthing/Phone/Screenshots
         exclude: []
     patterns:
       - name: Screenshot From YYYY-MM-DD HH-MM-SS.png
@@ -62,45 +62,30 @@ analysis_sets:
       - name: Screenshot_YYYY-MM-DD-HH-MM-SS.png
         regex: ^Screenshot_\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}\.png$
         timestamp_format: "Screenshot_%Y-%m-%d-%H-%M-%S.png"
+      - name: Screenshot at YYYY-MM-DD HH:MM:SS.png
+        regex: ^Screenshot at \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.png$
+        timestamp_format: "Screenshot at %Y-%m-%d %H:%M:%S.png"
 
-  camera:
-    methods:
-      - exif-created
-      - timestamp
-      - modified-time
-    plot:
-      title: Camera Activity
-      value_label: Photos
-      plots:
-        - panel
-        - heatmap
-      events:
-        - milestones
-    sources:
-      laptop:
-        path: ~/Pictures/Camera
-        exclude: []
-      phone:
-        path: ~/Syncthing/Phone/Camera/DCIM
-        exclude: []
-    anti_patterns:
-      - "*.HEIC.jpg"
-      - "*_thumbnail*"
-
-  combined:
-    combine:
-      - screenshots
-      - camera
-    plot:
-      title: Combined Image Activity
-      value_label: Images
-      plots:
-        - hourly
-        - timeseries
-      log: true
-      events:
-        - milestones
-      timeseries_mode: by_source
-      series_key: analysis
-      legend_title: Analysis
-      rolling_window: 14
+plots:
+  screenshots:
+    series:
+      - screenshot-phone
+      - screenshot-laptop
+    output_dirname: screenshot
+    title: Screenshot Activity
+    value_label: Screenshots
+    day_origin_hour: 8
+    figures:
+      - kind: histogram
+        mode: hour
+        filename: hour.png
+        title: Screenshot Activity by Hour of Day
+        y_label: Images (max-normalized to 100)
+        series:
+          - screenshot-phone
+          - screenshot-laptop
+      - kind: heatmap_per_source
+        series_key: source
+    events:
+      - new_phone_2022
+      - phd_defense
