@@ -16,7 +16,7 @@ app = Flask(
     static_url_path="",
 )
 BASE_DIR = Path(os.environ.get("TAGGER_BASE", ".")).resolve()
-STATE_DIR = Path(os.environ.get("TAGGER_STATE_DIR", "bruki/server/state"))
+STATE_DIR = Path(os.environ.get("TAGGER_STATE_DIR", "data/server"))
 STATE_PATH = (BASE_DIR / STATE_DIR).resolve()
 CONFIG_PATH = Path(os.environ.get("TAGGER_CONFIG", "config.yaml")).expanduser().resolve()
 JSONL_GLOB = os.environ.get("TAGGER_JSONL", str(STATE_DIR / "items.jsonl"))

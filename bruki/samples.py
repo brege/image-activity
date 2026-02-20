@@ -34,7 +34,7 @@ def main() -> None:
             key = (series_name, source_name)
             sources[key] = list_image_paths(source_spec, config.extensions, anti_patterns)
 
-    output_root = Path("data") / "samples"
+    output_root = Path("data") / "notebook" / "samples"
     output_root.mkdir(parents=True, exist_ok=True)
 
     source_items = sorted(sources.items())

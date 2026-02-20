@@ -61,7 +61,7 @@ torch = [{ index = "pytorch-cpu" }]
 
 [tool.ty.src]
 include = ["bruki"]
-exclude = ["docs/social", "data", "bruki/server/state"]
+exclude = ["docs/social", "data"]
 respect-ignore-files = true
 
 [tool.ruff]

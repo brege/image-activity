@@ -1,3 +1,4 @@
+import importlib
 import json
 import threading
 import time
@@ -96,18 +97,21 @@ def embed_images(
     model_name: str,
     batch_size: int,
 ) -> np.ndarray:
-    import torch
     from PIL import Image
-    from tqdm import tqdm
-    from transformers import CLIPImageProcessor, CLIPVisionModel
+
+    torch = importlib.import_module("torch")
+    tqdm = importlib.import_module("tqdm").tqdm
+    transformers = importlib.import_module("transformers")
+    clip_image_processor = transformers.CLIPImageProcessor
+    clip_vision_model = transformers.CLIPVisionModel
 
     del batch_size
-    processor = CLIPImageProcessor.from_pretrained(
+    processor = clip_image_processor.from_pretrained(
         model_name,
         use_fast=False,
         local_files_only=True,
     )
-    model = CLIPVisionModel.from_pretrained(
+    model = clip_vision_model.from_pretrained(
         model_name,
         local_files_only=True,
     )
@@ -167,7 +171,7 @@ def run(
     batch_size: int = 24,
     cluster_count: int = 0,
 ) -> dict:
-    from sklearn.cluster import MiniBatchKMeans
+    mini_batch_k_means = importlib.import_module("sklearn.cluster").MiniBatchKMeans
 
     status_path = state_dir / STATUS_FILE
     items_path = state_dir / ITEMS_FILE
@@ -208,7 +212,7 @@ def run(
         stage="clustering",
         cluster_count=k,
     )
-    clusterer = MiniBatchKMeans(
+    clusterer = mini_batch_k_means(
         n_clusters=k,
         random_state=0,
         batch_size=max(256, min(4096, k * 16)),

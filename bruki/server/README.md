@@ -25,4 +25,4 @@ This is related to the notebook in `classify.ipynb`, which includes analysis and
 ## Optional env vars
 
 - `TAGGER_CONFIG` sets the config file path.
-- `TAGGER_STATE_DIR` sets the state directory.
+- `TAGGER_STATE_DIR` sets the state directory (defaults to `data/server`).

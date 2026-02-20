@@ -59,7 +59,7 @@ This effort is evolving this project into a web app that can automatically and i
    jupyter notebook classify.ipynb
    ```
 
-The web app stores labels in `bruki/server/state/labels.jsonl`, and notebook experiments can be rerun as this file grows.
+The web app stores labels in `data/server/labels.jsonl`, and notebook experiments can be rerun as this file grows.
 
 ## Background
 
