@@ -8,7 +8,6 @@ from collections import Counter
 from pathlib import Path
 
 import numpy as np
-from sklearn.cluster import MiniBatchKMeans
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -187,6 +186,8 @@ def run(
     batch_size: int = 24,
     cluster_count: int = 0,
 ) -> dict:
+    from sklearn.cluster import MiniBatchKMeans
+
     status_path = state_dir / STATUS_FILE
     items_path = state_dir / ITEMS_FILE
     embeddings_path = state_dir / EMBEDDINGS_FILE
