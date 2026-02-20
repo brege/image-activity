@@ -29,43 +29,33 @@ def parse_args() -> argparse.Namespace:
     return args
 
 
-def collect_screenshot_sources(config) -> list[tuple[str, str, object, object]]:
-    sources: list[tuple[str, str, object, object]] = []
-    for series_name, series_config in config.data.items():
+def main() -> None:
+    args = parse_args()
+    random_state = random.Random(args.seed)
+    config = load_config(args.config)
+    sources: dict[tuple[str, str], list[Path]] = {}
+    for series_name, series_config in sorted(config.data.items()):
         if not series_name.startswith("screenshot"):
             continue
-        for source_name, source_config in series_config.sources.items():
-            sources.append((series_name, source_name, source_config, series_config))
-    return sources
+        anti_patterns = config.anti_patterns + series_config.anti_patterns
+        for source_name, source_spec in sorted(series_config.sources.items()):
+            key = (series_name, source_name)
+            sources[key] = list_image_paths(source_spec, config.extensions, anti_patterns)
 
-
-def sample_screenshot_sources(config, seed: int, samples: int) -> None:
-    random_state = random.Random(seed)
-    sources = collect_screenshot_sources(config)
     output_root = Path("data") / "samples"
     output_root.mkdir(parents=True, exist_ok=True)
 
-    for index, (series_name, source_name, source_config, series_config) in enumerate(
-        sources, start=1
-    ):
-        anti_patterns = config.anti_patterns + series_config.anti_patterns
-        file_paths = list_image_paths(source_config, config.extensions, anti_patterns)
-        if len(file_paths) < samples:
+    source_items = sorted(sources.items())
+    for index, ((series_name, source_name), file_paths) in enumerate(source_items, start=1):
+        if len(file_paths) < args.samples:
             raise RuntimeError(
                 f"Not enough files for {series_name}:{source_name}: "
-                f"found {len(file_paths)}, need {samples}"
+                f"found {len(file_paths)}, need {args.samples}"
             )
-        selected = random_state.sample(file_paths, samples)
         output_dir = output_root / str(index)
         output_dir.mkdir(parents=True, exist_ok=True)
-        for file_path in selected:
+        for file_path in random_state.sample(file_paths, args.samples):
             shutil.copy2(file_path, output_dir / file_path.name)
-
-
-def main() -> None:
-    args = parse_args()
-    config = load_config(args.config)
-    sample_screenshot_sources(config, args.seed, args.samples)
 
 
 if __name__ == "__main__":
