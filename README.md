@@ -8,7 +8,7 @@ Exploring image activity over time from multiple sources & image types, and buil
 ## Quickstart
 
 ```bash
-git clone https://github.com/brege/image-activity.git && cd image-activity && uv sync
+git clone https://github.com/brege/image-activity && cd image-activity && uv sync
 cp config.example.yaml config.yaml
 # see "Configuration" below to edit config.yaml
 uv run activity # --output-dir images
@@ -40,9 +40,7 @@ Ensure, if you plan on doing ML work:
 uv sync --extra ml --extra notebook
 ```
 
-#### In active development
-
-This effort involves evolving part of this project into a web app that automatically and interactively categorize screenshots. There are three main parts of this process, currently:
+This effort is evolving this project into a web app that can automatically and interactively categorize screenshots. There are three main parts of the web app:
 
 1. Generate a reproducible screenshot sample for manual labels.
    ```bash
@@ -114,6 +112,32 @@ My reference image collection fits in three main categories:
     <td><img src="docs/img/combined/month.png" width="100%"></td>
   </tr>
 </table>
+
+
+## Part 2: Screenshot Categorization
+
+Assumes running through the workflow of labeling ~5-10% of your screenshots with the `uv run www` tool.
+
+All images are generated through the Jupyter notebook [classify.ipynb](classify.ipynb) using two different clustering methods:
+
+1. Tesseract > extraction of OCR tokens > Jaccard similarity > cluster vs. label
+2. CLIP > extraction of image embeddings > cosine similarity > heatmap cluster vs. label
+
+### Labeled Screenshots UMAP Clusters using CLIP
+
+<img src="docs/img/notebook/umap.png" width="100%">
+
+###  Jaccard Similarity of Cluster OCR Vocabulary vs Manual Labels
+
+<img src="docs/img/notebook/ocr.png" width="100%">
+
+### CLIP Cluster Vote vs Manual Labels
+
+<img src="docs/img/notebook/clip.png" width="100%">
+
+See [classify.ipynb](classify.ipynb) for full analysis. In short: CLIP is more accurate, faster, but OCR provides more fuzz for multi-labeling.
+
+The web app currently includes only CLIP clustering in the backend. OCR will be useful to make search more robust and to provide additional suggestions.
 
 ### Usage
 
