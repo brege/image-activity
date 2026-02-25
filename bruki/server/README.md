@@ -10,7 +10,7 @@ data:
   screenshot-phone:
     sources: 
       phone:
-        path: /home/user/Syncthing/phone/Pictures/DCIM`
+        path: /home/user/Shared/phone/Pictures/DCIM`
 # data.screenshot-laptop.sources.laptop.path ..
 ```
 

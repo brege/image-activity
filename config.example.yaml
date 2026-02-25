@@ -31,7 +31,7 @@ data:
       - timestamp
     sources:
       phone:
-        path: ~/Syncthing/Phone/Pictures/Screenshots
+        path: ~/Shared/Phone/Pictures/Screenshots
         exclude: []
     patterns:
       - name: Screenshot_YYYYMMDD-HHMMSS.png

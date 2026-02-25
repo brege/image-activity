@@ -1,6 +1,8 @@
-# **brūki** · Image Charts & Tagging
+# **brūki**
 
-Brūki helps you explore habits and trends across your image collections. It uses machine learning to help you tag and filter screenshots (recipes, receipts, chats and more) through your browser.
+Brūki analyzes your image collections and has a screenshot tagging system that works right from your web browser. 
+
+It uses machine learning clustering that makes categorizing oft captured recipes, receipts, chats, etc intuitive. Since screenshot filenames provide very little metadata context, brūki's multi-model approach using [OpenAI](https://openai.com/)'s [CLIP](https://github.com/openai/CLIP) and [OCR](https://en.wikipedia.org/wiki/Optical_Character_Recognition) via [tesseract](https://github.com/UB-Mannheim/tesseract) helps you group by similarity.
 
 ## Setup
 
@@ -10,7 +12,7 @@ cd bruki && uv sync # [--extra notebook --extra ml]
 ```
 
 Configure all image sources in `config.yaml`. See [Configuration](#configuration)
-```yaml
+```bash
 cp config.example.yaml config.yaml
 ```
 
@@ -148,7 +150,7 @@ data:
       - modified-time
     sources:
       phone:
-        path: ~/Syncthing/Phone/DCIM/Camera
+        path: ~/Shared/Phone/DCIM/Camera
       laptop:
         path: ~/Pictures/Camera
 ```
