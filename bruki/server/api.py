@@ -2,7 +2,9 @@ import argparse
 import json
 import logging
 import os
+import sqlite3
 import threading
+import time
 from pathlib import Path
 
 from flask import Flask, jsonify, render_template, request, send_file
@@ -83,6 +85,93 @@ def read_jsonl(path: Path, strict: bool = True) -> list[dict]:
                 if strict:
                     raise ValueError(f"invalid JSONL in {path}:{line_no}") from None
     return rows
+
+
+def now_iso() -> str:
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+
+def init_review_tables(db_path: Path) -> None:
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(db_path)
+    with conn:
+        conn.executescript(
+            """
+            CREATE TABLE IF NOT EXISTS tag_assignment (
+                input_path TEXT NOT NULL,
+                tag TEXT NOT NULL,
+                source TEXT NOT NULL,
+                confidence REAL NOT NULL,
+                updated_at TEXT NOT NULL,
+                PRIMARY KEY(input_path, tag)
+            );
+            CREATE INDEX IF NOT EXISTS idx_tag_assignment_tag ON tag_assignment(tag);
+
+            CREATE TABLE IF NOT EXISTS review_event (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                input_path TEXT NOT NULL,
+                before_tags TEXT NOT NULL,
+                after_tags TEXT NOT NULL,
+                actor TEXT NOT NULL,
+                action TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            );
+            """
+        )
+    conn.close()
+
+
+def sync_tag_assignment(db_path: Path, input_path: str, categories: list[str]) -> None:
+    init_review_tables(db_path)
+    now = now_iso()
+    conn = sqlite3.connect(db_path)
+    with conn:
+        conn.execute("DELETE FROM tag_assignment WHERE input_path = ?", (input_path,))
+        if categories:
+            conn.executemany(
+                """
+                INSERT INTO tag_assignment(input_path, tag, source, confidence, updated_at)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                [(input_path, tag, "human", 1.0, now) for tag in categories],
+            )
+    conn.close()
+
+
+def log_review_event(
+    db_path: Path,
+    input_path: str,
+    before_tags: list[str],
+    after_tags: list[str],
+    actor: str = "ui",
+) -> None:
+    init_review_tables(db_path)
+    before_set = set(before_tags)
+    after_set = set(after_tags)
+    if not before_set and after_set:
+        action = "add"
+    elif before_set and not after_set:
+        action = "clear"
+    else:
+        action = "update"
+
+    conn = sqlite3.connect(db_path)
+    with conn:
+        conn.execute(
+            """
+            INSERT INTO review_event(input_path, before_tags, after_tags, actor, action, created_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (
+                input_path,
+                json.dumps(sorted(before_set)),
+                json.dumps(sorted(after_set)),
+                actor,
+                action,
+                now_iso(),
+            ),
+        )
+    conn.close()
 
 
 def labels_mtime_ns() -> int | None:
@@ -204,6 +293,7 @@ def patch_item(idx):
     categories = body.get("categories", [])
     if not isinstance(categories, list) or any(not isinstance(entry, str) for entry in categories):
         return jsonify({"error": "categories must be a list of strings"}), 400
+    categories_clean = sorted({entry.strip() for entry in categories if entry.strip()})
     items = load_items()
     if idx < 0 or idx >= len(items):
         return jsonify({"error": "out of range"}), 404
@@ -211,10 +301,26 @@ def patch_item(idx):
     if not input_path:
         return jsonify({"error": "missing input_path"}), 500
     labels_by_path = dict(load_labels_cached())
-    labels_by_path[input_path] = categories
+    previous_raw = labels_by_path.get(input_path, [])
+    previous = sorted({entry.strip() for entry in previous_raw if entry.strip()})
+    if previous == categories_clean:
+        response = dict(items[idx])
+        response["categories"] = previous
+        response["_idx"] = idx
+        return jsonify(response)
+
+    labels_by_path[input_path] = categories_clean
     write_labels_file(labels_by_path)
+    db_path = resolve_state_db()
+    sync_tag_assignment(db_path=db_path, input_path=input_path, categories=categories_clean)
+    log_review_event(
+        db_path=db_path,
+        input_path=input_path,
+        before_tags=previous,
+        after_tags=categories_clean,
+    )
     response = dict(items[idx])
-    response["categories"] = categories
+    response["categories"] = categories_clean
     response["_idx"] = idx
     return jsonify(response)
 
@@ -271,6 +377,85 @@ def ml_ocr():
     if SAMPLE_MODE:
         return jsonify({"disabled": True})
     return jsonify(ml_pipeline.sync_ocr_db(config_path=CONFIG_PATH, db_path=resolve_state_db()))
+
+
+@app.get("/api/review/summary")
+def review_summary():
+    db_path = resolve_state_db()
+    init_review_tables(db_path)
+    conn = sqlite3.connect(db_path)
+    row = conn.execute(
+        """
+        SELECT
+            COUNT(*) AS events,
+            SUM(CASE WHEN action = 'add' THEN 1 ELSE 0 END) AS adds,
+            SUM(CASE WHEN action = 'update' THEN 1 ELSE 0 END) AS updates,
+            SUM(CASE WHEN action = 'clear' THEN 1 ELSE 0 END) AS clears,
+            SUM(CASE WHEN action = 'noop' THEN 1 ELSE 0 END) AS noops
+        FROM review_event
+        """,
+    ).fetchone()
+    top_tags = conn.execute(
+        """
+        SELECT tag, COUNT(*) AS c
+        FROM tag_assignment
+        GROUP BY tag
+        ORDER BY c DESC, tag ASC
+        LIMIT 20
+        """,
+    ).fetchall()
+    conn.close()
+    events, adds, updates, clears, noops = row if row else (0, 0, 0, 0, 0)
+    return jsonify(
+        {
+            "events": int(events or 0),
+            "adds": int(adds or 0),
+            "updates": int(updates or 0),
+            "clears": int(clears or 0),
+            "noops": int(noops or 0),
+            "top_tags": [{"tag": tag, "count": int(count)} for tag, count in top_tags],
+        }
+    )
+
+
+@app.get("/api/review/events")
+def review_events():
+    raw_limit = request.args.get("limit", "50")
+    try:
+        limit = int(raw_limit)
+    except ValueError:
+        return jsonify({"error": "limit must be an integer"}), 400
+    if limit < 1 or limit > 500:
+        return jsonify({"error": "limit must be in [1, 500]"}), 400
+
+    db_path = resolve_state_db()
+    init_review_tables(db_path)
+    conn = sqlite3.connect(db_path)
+    rows = conn.execute(
+        """
+        SELECT id, input_path, before_tags, after_tags, actor, action, created_at
+        FROM review_event
+        ORDER BY id DESC
+        LIMIT ?
+        """,
+        (limit,),
+    ).fetchall()
+    conn.close()
+
+    payload = []
+    for event_id, input_path, before_tags, after_tags, actor, action, created_at in rows:
+        payload.append(
+            {
+                "id": int(event_id),
+                "input_path": input_path,
+                "before_tags": json.loads(before_tags),
+                "after_tags": json.loads(after_tags),
+                "actor": actor,
+                "action": action,
+                "created_at": created_at,
+            }
+        )
+    return jsonify(payload)
 
 
 def path_within(path: Path, root: Path) -> bool:

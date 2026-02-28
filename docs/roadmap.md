@@ -22,6 +22,40 @@ uv run www
 
 ## Pipeline & Implementation
 
+## Progress Snapshot (Current)
+
+### Infra
+
+- [x] Added persistent review data in `state.sqlite3`:
+- [x] `tag_assignment` table (current per-image tags with provenance/confidence).
+- [x] `review_event` table (before/after tags, action, timestamp).
+- [x] Added `GET /api/review/summary` endpoint.
+- [x] Added `GET /api/review/events` endpoint with bounded `limit`.
+- [x] Tag writes now normalize values (trim, dedupe, sort).
+- [x] Prevented new no-op review events when tags are unchanged.
+
+### UX
+
+- [x] Existing cluster gallery bulk-tag flow confirmed working in app.
+- [x] Existing select/deselect/apply flow confirmed with real manual checks.
+- [ ] Expose review summary/events in UI (currently API-only).
+- [ ] Show cluster quality cues in UI (cohesion/purity indicators).
+
+### ML/DS
+
+- [x] Current cold-start clustering pipeline in app confirmed available (`/api/ml/start` etc).
+- [x] Existing CLIP + OCR notebook analysis reviewed and aligned with roadmap motivation.
+- [ ] Add cluster quality/stability scoring to production clustering output.
+- [ ] Add review-priority queue scoring.
+- [ ] Add first supervised multi-label training loop from review data.
+
+### Milestone Status
+
+- [ ] Milestone A (in progress): cold-start clustering + cluster-first labeling workflow.
+- [ ] Milestone B: review queue + first multi-label predictor.
+- [ ] Milestone C: scheduled retrain/recluster + ingest-time tagging.
+- [ ] Milestone D: retrieval ranking + monitoring and promotion gates.
+
 ### 1) Data model and provenance
 
 - Define entities for screenshots, tags, screenshot-tag links, cluster assignments, predictions, and review actions.
