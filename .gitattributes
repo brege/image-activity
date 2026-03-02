@@ -1,2 +1,2 @@
-*.ipynb filter=nbstripout
-notebooks/clusters.ipynb -filter
+*.ipynb filter=nbstripout diff=ipynb
+notebooks/clusters.ipynb !filter !diff

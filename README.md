@@ -125,15 +125,28 @@ The web app generates an isolated dataset from the Jupyter notebook:
 
 ###  Jaccard Similarity of Cluster OCR Vocabulary vs Manual Labels
 
+<details>
+<summary><b>Show OCR Heatmap</b></summary>                                                                   
 <img src="docs/img/notebook/ocr.png" width="100%">
+
+</details>
 
 ### CLIP Cluster Vote vs Manual Labels
 
+<details>
+<summary><b>Show CLIP Heatmap</b></summary>                                                                   
+
 <img src="docs/img/notebook/clip.png" width="100%">
 
-See [classify.ipynb](classify.ipynb) for full analysis. In short: CLIP is more accurate, faster, but OCR provides more fuzz for multi-labeling.
+</details>
 
-The web app currently includes only CLIP clustering in the backend. OCR will be useful to make search more robust and to provide additional suggestions.
+See [classify.ipynb](classify.ipynb) for full analysis. In short: CLIP is more accurate, faster, but OCR provides more fuzz for multi-labeling. The web app currently includes only CLIP clustering in the backend. OCR will be useful to make search more robust and to provide additional suggestions.
+
+### Comparing CLIP-family Models
+
+I've compared CLIP-family models from Facebook/Meta, Google, OpenAI, and Apple for performance and consensus of cluster overlap. See [notebooks/clusters.ipynb](notebooks/clusters.ipynb) for more details.
+
+<img src="docs/img/notebook/pareto.png" width="100%">
 
 ## Configuration
 
