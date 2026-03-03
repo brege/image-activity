@@ -8,24 +8,6 @@ This screenshot server is inspired by [Immich](https://immich.app/)'s face-group
 
 This assumes a human-in-the-loop model where the user begins tagging through the UI, while initial clustering remains unsupervised. OCR-derived signals can help association for some labels, but they are secondary to visual/structural screenshot features.
 
-## Notebooks 
-
-- Unsupervised **OCR** producers are in the [OCR Notebook](notebooks/ocr.ipynb).
-- Unsupervised **CLIP**-family embedding-production and cluster analysis in the [CLIP Notebook](notebooks/clusters.ipynb).
-- Supervised, partially **labeled** analysis OCR vs. CLIP in the [Classifier Notebook](../classify.ipynb)
-
-```bash
-jupyter notebook classify.ipynb
-```
-
-## Labeling by web app
-
-The web app constructs the same methodology as the Classifier Notebook but optimized for performance. Launch with:
-
-```bash
-uv run www
-```
-
 ## References
 
 A compilation of papers that may be useful for this project. This section is this document's footer.

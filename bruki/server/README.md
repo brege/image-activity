@@ -2,6 +2,8 @@
 
 This is a work in progress app for creating genre tags for screenshots.
 
+See: [../../docs/tagger.md](../../docs/tagger.md)
+
 ## Setup
 
 Set screenshot source paths in `config.yaml`:
@@ -29,7 +31,7 @@ data:
 3. The app is running on http://localhost:5000. Open this URL in your browser
 4. Label images (these are saved to `data/notebook/labels.jsonl`)
 
-Sample mode does not run machine learning. It is only for labeling. You use these labels for similarity analysis testing in the Jupyter notebook, `classify.ipynb`.
+Sample mode does not run machine learning. It is only for labeling. You use these labels for similarity analysis testing in the Jupyter notebook, `notebooks/classify.ipynb`.
 
 ## Production with Machine Learning
 
@@ -41,4 +43,4 @@ uv run www
 ```
 The app will immediately begin building the CLIP model by clustering images by their vector space embedding similarities, then perform OCR on all of your images. The Jupyter notebook can help you interact with this same data through an isolated database. 
 
-The main production data is all stored in a SQLite database at `data/server/state.sqlite3`.
+The main production data is all stored in a SQLite database at `data/server/state.sqlite3`. Once I've stabilized the model implementation, the web app will make use of re-enforced learning on top of the clustering and suggestion algorithm.

@@ -46,7 +46,7 @@
 > [!WARNING] 
 > Work-in-progress and may be out-of-date. 
 
-`config.py` owns config loading and shared path resolution. `activity.py` and `samples.py` are CLIs. `ml.py` is a library used by `api.py`. `classify.ipynb` reads labels and evaluates OCR/CLIP workflows.
+`config.py` owns config loading and shared path resolution. `activity.py` and `samples.py` are CLIs. `ml.py` is a library used by `api.py`. `notebooks/classify.ipynb` reads labels and evaluates OCR/CLIP workflows.
 
 ```mermaid
 flowchart TB
@@ -54,7 +54,7 @@ flowchart TB
     A["activity.py<br/>timestamp extraction<br/>plot orchestration"]
     P["plots.py<br/>histograms + curves<br/>heatmaps"]
     S["samples.py<br/>generate samples"]
-    N["classify.ipynb<br/>OCR + CLIP analysis"]
+    N["notebooks/classify.ipynb<br/>OCR + CLIP analysis"]
     API["api.py<br/>manual labeling routes"]
     L["labels.jsonl<br/>manual labels"]
     ML["ml.py<br/>embeddings + clustering<br/>state writes"]
