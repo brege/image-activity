@@ -15,9 +15,14 @@ let lastMlStatusKey = '';
 let mlPollDelayMs = 3000;
 let mlPollTimer = null;
 let forceSingleView = false;
-let galleryExpanded = false;
+let galleryExpanded = true;
+let thumbMinPx = 180;
+let galleryModifierHeld = false;
 let tagScope = '__any__';
 const sampleMode = window.TAGGER_SAMPLE_MODE === true;
+const THUMB_MIN_PX = 120;
+const THUMB_MAX_PX = 420;
+const THUMB_STEP_PX = 20;
 
 const shot = document.getElementById('shot');
 const progress = document.getElementById('progress');
@@ -37,6 +42,18 @@ const bulkCount = document.getElementById('bulk-count');
 const bulkSelectToggle = document.getElementById('bulk-select-toggle');
 const bulkExpand = document.getElementById('bulk-expand');
 const applyTagsButton = document.getElementById('apply-tags');
+const thumbSizeDown = document.getElementById('thumb-size-down');
+const thumbSizeUp = document.getElementById('thumb-size-up');
+
+function updateGalleryCheckVisibility() {
+  gallery.classList.toggle('has-selection', selectedPaths.size > 0);
+  gallery.classList.toggle('modifier-held', galleryModifierHeld);
+}
+
+function updateThumbSizeToggle(galleryEnabled) {
+  thumbSizeDown.disabled = !galleryEnabled || thumbMinPx <= THUMB_MIN_PX;
+  thumbSizeUp.disabled = !galleryEnabled || thumbMinPx >= THUMB_MAX_PX;
+}
 
 function escapeHtml(value) {
   return String(value)
@@ -63,15 +80,24 @@ function clearSelection() {
 
 function setFilepath(pathText, categories = []) {
   filepathPath.textContent = pathText || '';
-  if (!Array.isArray(categories) || categories.length === 0) {
-    filepathLabels.textContent = '';
-    return;
-  }
-  filepathLabels.textContent = categories.join(', ');
+  filepathLabels.replaceChildren();
+  if (!Array.isArray(categories) || categories.length === 0) return;
+  const fragment = document.createDocumentFragment();
+  categories.forEach((category) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'filepath-tag';
+    button.dataset.tag = category;
+    button.textContent = category;
+    fragment.appendChild(button);
+  });
+  filepathLabels.appendChild(fragment);
 }
 
 function updateBulkBar(selectionModeEnabled, galleryEnabled) {
   void selectionModeEnabled;
+  updateGalleryCheckVisibility();
+  updateThumbSizeToggle(galleryEnabled);
   selectionControls.classList.remove('hidden');
   const n = selectedPaths.size;
   bulkCount.textContent = `${n} selected`;
@@ -395,6 +421,14 @@ async function init() {
     applyClusterFilter(true);
   });
 
+  filepathLabels.addEventListener('click', (event) => {
+    const button = event.target.closest('.filepath-tag');
+    if (!button) return;
+    const selected = button.dataset.tag || '__any__';
+    tagScope = selected;
+    applyClusterFilter(true);
+  });
+
   clustersDropdown.addEventListener('change', () => {
     selectedCluster = clustersDropdown.value;
     applyClusterFilter(true);
@@ -430,6 +464,18 @@ async function init() {
       return;
     }
     galleryExpanded = !galleryExpanded;
+    renderGallery();
+  });
+
+  thumbSizeDown.addEventListener('click', () => {
+    if (thumbSizeDown.disabled) return;
+    thumbMinPx = Math.max(THUMB_MIN_PX, thumbMinPx - THUMB_STEP_PX);
+    renderGallery();
+  });
+
+  thumbSizeUp.addEventListener('click', () => {
+    if (thumbSizeUp.disabled) return;
+    thumbMinPx = Math.min(THUMB_MAX_PX, thumbMinPx + THUMB_STEP_PX);
     renderGallery();
   });
 
@@ -577,6 +623,7 @@ function renderGallery() {
   shot.classList.add('hidden');
   gallery.classList.remove('hidden');
   gallery.classList.toggle('expanded', galleryExpanded);
+  gallery.style.setProperty('--thumb-min', `${thumbMinPx}px`);
   gallery.innerHTML = matches
     .map(
       (
@@ -584,6 +631,9 @@ function renderGallery() {
       ) => `<div class="thumb${selectedPaths.has(item.input_path) ? ' selected' : ''}" data-path="${item.input_path}">
         <button class="check" type="button">${selectedPaths.has(item.input_path) ? '✓' : ''}</button>
         <img src="/image?path=${encodeURIComponent(item.input_path)}" alt="">
+        <div class="caption">${(item.categories || [])
+          .map((tag) => `<span class="tag">${escapeHtml(tag)}</span>`)
+          .join('')}</div>
       </div>`,
     )
     .join('');
@@ -673,6 +723,21 @@ function renderGallery() {
   updateBulkBar(selectionModeEnabled, true);
 }
 
+function syncGalleryModifierState(event) {
+  const nextHeld = Boolean(event.shiftKey || event.ctrlKey || event.metaKey);
+  if (galleryModifierHeld === nextHeld) return;
+  galleryModifierHeld = nextHeld;
+  updateGalleryCheckVisibility();
+}
+
+document.addEventListener('keydown', syncGalleryModifierState);
+document.addEventListener('keyup', syncGalleryModifierState);
+window.addEventListener('blur', () => {
+  if (!galleryModifierHeld) return;
+  galleryModifierHeld = false;
+  updateGalleryCheckVisibility();
+});
+
 document.addEventListener('keydown', (event) => {
   const inInput = tagify && document.activeElement === tagify.DOM.input;
   const inJump = document.activeElement === jump;
@@ -703,6 +768,7 @@ document.addEventListener('keydown', (event) => {
         });
         const target = thumbs[galleryIndex];
         target.classList.add('active');
+        target.scrollIntoView({ block: 'nearest', inline: 'nearest' });
         const path = target.getAttribute('data-path');
         const activeItem = items.find((item) => item.input_path === path);
         setFilepath(path, activeItem?.categories || []);
