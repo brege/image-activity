@@ -22,7 +22,7 @@ uv run activity
 
 ## Data Science & Machine Learning
 
-OCR extraction, CLIP-family clustering, and supervised OCR vs. CLIP evaluation are documented in [Data Science & Machine Learning](docs/features.md).
+OCR extraction, CLIP-family clustering, and supervised OCR vs. CLIP evaluation are documented in [Data Science & Machine Learning](notebooks/README.md).
 
 ```bash
 uv sync --extra notebook --extra ml
@@ -31,7 +31,7 @@ jupyter notebook notebooks/
 
 ## Screenshot Tagger
 
-Labels used in the [Classifier Notebook](notebooks/classify.ipynb) (Jupyter) are generated through brūki's web UI. See [Screenshot Tagging Server](docs/tagger.md).
+Labels used in the [Classifier Notebook](notebooks/classify.ipynb) (Jupyter) are generated through brūki's web UI. See [Screenshot Tagging Server](bruki/server/README.md).
 
 ```bash
 uv sync --extra ml
