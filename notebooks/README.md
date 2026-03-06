@@ -12,7 +12,7 @@ uv sync --extra ml --extra notebook
 - Unsupervised **CLIP**-family embedding-production and cluster analysis in the [CLIP-family Models Notebook](../notebooks/clusters.ipynb).
 - Supervised, partially **labeled** analysis of OCR vs. CLIP in the [Classifier Notebook](../notebooks/classify.ipynb)
 
-The first two do not require labeled data. The labels used in the [Classifier Notebook](../notebooks/classify.ipynb) are generated through the web UI. See [Screenshot Tagging Server](../bruki/server/README.md).
+The first two do not require labeled data. The labels used in the [Classifier Notebook](../notebooks/classify.ipynb) are generated through the web UI. See [Screenshot Tagging Server](../bruki/server/#readme).
 
 ## Usage
 

@@ -2,7 +2,7 @@
 
 Brūki analyzes your image collections and has a screenshot tagging system that works right from your web browser. 
 
-Its [Screenshot Tagger](docs/tagger.md) uses machine learning clustering that makes categorizing oft captured recipes, receipts, chats, etc classifiable. Since screenshot filenames provide very little metadata context, brūki's multi-model approach using [OpenAI](https://openai.com/)'s [CLIP](https://github.com/openai/CLIP) and [OCR](https://en.wikipedia.org/wiki/Optical_Character_Recognition) via [tesseract](https://github.com/UB-Mannheim/tesseract) helps you group by similarity.
+Its [Screenshot Tagger](bruki/server/#readme) uses machine learning clustering that makes categorizing oft captured recipes, receipts, chats, etc classifiable. Since screenshot filenames provide very little metadata context, brūki's multi-model approach using [OpenAI](https://openai.com/)'s [CLIP](https://github.com/openai/CLIP) and [OCR](https://en.wikipedia.org/wiki/Optical_Character_Recognition) via [tesseract](https://github.com/UB-Mannheim/tesseract) helps you group by similarity.
 
 ## Setup
 
@@ -14,7 +14,7 @@ cd bruki && uv sync # [--extra notebook --extra ml]
 
 ## Exploratory Data Analysis
 
-Configure all image sources in `config.yaml`, demarcate major events, and generate the plots in [Exploratory Data Analysis](docs/explore.md).
+Configure all image sources in `config.yaml`, demarcate major events, and generate the plots in [Exploratory Data Analysis](notebooks/#readme).
 
 ```bash
 uv run activity
@@ -22,7 +22,7 @@ uv run activity
 
 ## Data Science & Machine Learning
 
-OCR extraction, CLIP-family clustering, and supervised OCR vs. CLIP evaluation are documented in [Data Science & Machine Learning](notebooks/README.md).
+OCR extraction, CLIP-family clustering, and supervised OCR vs. CLIP evaluation are documented in [Data Science & Machine Learning](notebooks/#readme).
 
 ```bash
 uv sync --extra notebook --extra ml
@@ -31,7 +31,7 @@ jupyter notebook notebooks/
 
 ## Screenshot Tagger
 
-Labels used in the [Classifier Notebook](notebooks/classify.ipynb) (Jupyter) are generated through brūki's web UI. See [Screenshot Tagging Server](bruki/server/README.md).
+Labels used in the [Classifier Notebook](notebooks/classify.ipynb) (Jupyter) are generated through brūki's web UI. See [Screenshot Tagging Server](bruki/server/#readme).
 
 ```bash
 uv sync --extra ml

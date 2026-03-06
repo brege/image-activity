@@ -2,8 +2,6 @@
 
 This is a work in progress app for creating genre tags for screenshots.
 
-See: [../../docs/tagger.md](../../docs/tagger.md)
-
 ## Setup
 
 Set screenshot source paths in `config.yaml`:
