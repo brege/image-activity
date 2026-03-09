@@ -2,7 +2,7 @@
 
 Brūki analyzes your image collections and has a screenshot tagging system that works right from your web browser. 
 
-Its [Screenshot Tagger](bruki/server/#readme) uses machine learning clustering that makes categorizing oft captured recipes, receipts, chats, etc classifiable. Since screenshot filenames provide very little metadata context, brūki's multi-model approach using [OpenAI](https://openai.com/)'s [CLIP](https://github.com/openai/CLIP) and [OCR](https://en.wikipedia.org/wiki/Optical_Character_Recognition) via [tesseract](https://github.com/UB-Mannheim/tesseract) helps you group by similarity.
+Its [Screenshot Tagger](bruki/server/#readme) uses machine learning clustering that makes categorizing oft captured recipes, receipts, chats, etc classifiable. Since screenshot filenames provide very little metadata context, brūki's multi-model approach using [OpenAI](https://openai.com/)'s [CLIP](https://github.com/openai/CLIP) and [OCR](https://en.wikipedia.org/wiki/Optical_Character_Recognition) via [tesseract](https://github.com/UB-Mannheim/tesseract) helps you group by your screenshots similarity.
 
 ## Setup
 
@@ -19,6 +19,8 @@ Configure all image sources in `config.yaml`, demarcate major events, and genera
 ```bash
 uv run activity
 ```
+
+See my blog post [*Exploring my camera, screenshot, and image activity*](https://brege.org/post/image-activity/) for pictures and complete exploratory data analysis.
 
 ## Data Science & Machine Learning
 
